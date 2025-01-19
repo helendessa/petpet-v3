@@ -2,6 +2,8 @@ import { FaRegComment } from "react-icons/fa";
 import { BiRepost } from "react-icons/bi";
 import { FaRegHeart } from "react-icons/fa";
 import { FaRegBookmark } from "react-icons/fa6";
+import { IoPaw } from "react-icons/io5";
+import { IoPawOutline } from "react-icons/io5";
 import { FaTrash } from "react-icons/fa";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -12,9 +14,12 @@ import LoadingSpinner from "./LoadingSpinner";
 const Post = ({ post }) => {
     const [comment, setComment] = useState("");
     const { data: authUser } = useQuery({ queryKey: ["authUser"] });
-	const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
 
-    const { mutate: deletePost, isLoading } = useMutation({
+    const [likes, setLikes] = useState(post.likes);
+    const [isLiked, setIsLiked] = useState(post.likes.includes(authUser._id));
+
+    const { mutate: deletePost, isLoading: isDeleting } = useMutation({
         mutationFn: async () => {
             try {
                 const res = await fetch(`/api/posts/${post._id}`, {
@@ -34,17 +39,45 @@ const Post = ({ post }) => {
         },
         onSuccess: () => {
             toast.success("Post deleted successfully!");
-			queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
         },
     });
+
+    const { mutate: likePost, isLoading: isLiking } = useMutation({
+        mutationFn: async () => {
+            try {
+                const res = await fetch(`/api/posts/like/${post._id}`, {
+                    method: "POST",
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Something went wrong!");
+                }
+
+                return data;
+            } catch (error) {
+                throw new Error(error);
+            }
+        },
+        onSuccess: (updatedLikes) => {
+            toast.success(isLiked ? "Post unliked successfully!" : "Post liked successfully!");
+            setLikes(updatedLikes);
+            setIsLiked(!isLiked);
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
+
     const postOwner = post.user;
-    const isLiked = false;
 
     const isMyPost = authUser._id === post.user._id;
 
     const formattedDate = "1h";
 
-    const isCommenting = false;
+    const isCommenting = true;
 
     const handleDeletePost = () => {
         deletePost();
@@ -54,7 +87,10 @@ const Post = ({ post }) => {
         e.preventDefault();
     };
 
-    const handleLikePost = () => {};
+    const handleLikePost = () => {
+        if (isLiking) return;
+        likePost();
+    };
 
     return (
         <>
@@ -76,11 +112,11 @@ const Post = ({ post }) => {
                         </span>
                         {isMyPost && (
                             <span className='flex justify-end flex-1'>
-                                {!isLoading && (
+                                {!isDeleting && (
                                     <FaTrash className='cursor-pointer hover:text-red-500' onClick={handleDeletePost} />
                                 )}
 
-                                {isLoading && <LoadingSpinner size='sm' />}
+                                {isDeleting && <LoadingSpinner size='sm' />}
                             </span>
                         )}
                     </div>
@@ -108,11 +144,11 @@ const Post = ({ post }) => {
                             {/* We're using Modal Component from DaisyUI */}
                             <dialog id={`comments_modal${post._id}`} className='modal border-none outline-none'>
                                 <div className='modal-box rounded border border-gray-600'>
-                                    <h3 className='font-bold text-lg mb-4'>COMMENTS</h3>
+                                    <h3 className='font-bold text-lg mb-4'>Comentários</h3>
                                     <div className='flex flex-col gap-3 max-h-60 overflow-auto'>
                                         {post.comments.length === 0 && (
                                             <p className='text-sm text-slate-500'>
-                                                No comments yet 🤔 Be the first one 😉
+                                                Sem comentários ainda... 🤔 Seja o primeiro! 😉
                                             </p>
                                         )}
                                         {post.comments.map((comment) => (
@@ -142,13 +178,13 @@ const Post = ({ post }) => {
                                     >
                                         <textarea
                                             className='textarea w-full p-1 rounded text-md resize-none border focus:outline-none  border-gray-800'
-                                            placeholder='Add a comment...'
+                                            placeholder='Adicione um comentário...'
                                             value={comment}
                                             onChange={(e) => setComment(e.target.value)}
                                         />
                                         <button className='btn btn-primary rounded-full btn-sm text-white px-4'>
                                             {isCommenting ? (
-                                                <span className='loading loading-spinner loading-md'></span>
+                                                <LoadingSpinner size='md'/>
                                             ) : (
                                                 "Post"
                                             )}
@@ -164,17 +200,18 @@ const Post = ({ post }) => {
                                 <span className='text-sm text-slate-500 group-hover:text-green-500'>0</span>
                             </div>
                             <div className='flex gap-1 items-center group cursor-pointer' onClick={handleLikePost}>
-                                {!isLiked && (
-                                    <FaRegHeart className='w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500' />
+                                {isLiking && <LoadingSpinner size='sm' />}
+                                {!isLiked && !isLiking &&  (
+                                    <IoPawOutline className='w-4 h-4 cursor-pointer text-slate-500 group-hover:text-slate-500' />
                                 )}
-                                {isLiked && <FaRegHeart className='w-4 h-4 cursor-pointer text-pink-500 ' />}
+                                {isLiked && !isLiking && <IoPaw className='w-4 h-4 cursor-pointer text-blue-500 ' />}
 
                                 <span
-                                    className={`text-sm text-slate-500 group-hover:text-pink-500 ${
-                                        isLiked ? "text-pink-500" : ""
+                                    className={`text-sm group-hover:text-blue-500 ${
+                                        isLiked ? "text-blue-500" : ""
                                     }`}
                                 >
-                                    {post.likes.length}
+                                    {likes.length}
                                 </span>
                             </div>
                         </div>
