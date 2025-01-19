@@ -26,7 +26,7 @@ app.use(cors({
     origin: 'http://localhost:3000', // substitua pela URL do seu front-end
     credentials: true,
 }));
-app.use(express.json()); // to parse req.body
+app.use(express.json({limit:"5mb"})); // to parse req.body
 app.use(express.urlencoded({ extended: true })); // to parse form data
 
 app.use(cookieParser());
