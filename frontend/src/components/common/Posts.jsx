@@ -3,7 +3,7 @@ import PostSkeleton from "../skeletons/PostSkeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-const Posts = ({ feedType, username }) => {
+const Posts = ({ feedType, username, userId }) => {
     const getPostEndpoint = (feedType, username) => {
         switch (feedType) {
             case "forYou":
@@ -13,7 +13,7 @@ const Posts = ({ feedType, username }) => {
             case "posts":
                 return `/api/posts/user/${username}`;
             case "likes":
-                return `/api/posts/likes/${username}`;
+                return `/api/posts/likes/${userId}`;
             default:
                 return "/api/posts/all";
         }
@@ -49,7 +49,7 @@ const Posts = ({ feedType, username }) => {
                 </div>
             )}
             {!isLoading && !isRefetching && posts?.length === 0 && (
-                <p className='text-center my-4'>No posts in this tab. Switch 👻</p>
+                <p className='text-center my-4'>Nenhuma publicação aqui!</p>
             )}
             {!isLoading && !isRefetching && posts && (
                 <div>
