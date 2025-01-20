@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import RightPanelSkeleton from "../skeletons/RightPanelSkeleton";
-import useFollow from "../useFollow";
+import useFollow from "../../hooks/useFollow";
 import LoadingSpinner from "./LoadingSpinner";
 
 const RightPanel = () => {
@@ -47,7 +47,7 @@ const RightPanel = () => {
                                 <div className='flex gap-2 items-center'>
                                     <div className='avatar'>
                                         <div className='w-8 rounded-full'>
-                                            <img src={user.profileImg || "/avatar-placeholder.png"} />
+                                            <img src={user.profileImage || "/avatar-placeholder.png"} />
                                         </div>
                                     </div>
                                     <div className='flex flex-col'>

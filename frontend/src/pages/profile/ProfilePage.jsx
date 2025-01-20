@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
+import useFollow from "../../hooks/useFollow";
+import useUpdateUserProfile from "../../hooks/useUpdateUserProfile";
 
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaLink, FaArrowLeft } from "react-icons/fa";
@@ -15,15 +17,17 @@ const ProfilePage = () => {
     const [coverImg, setCoverImg] = useState(null);
     const [profileImg, setProfileImg] = useState(null);
     const [feedType, setFeedType] = useState("posts");
+    const [isFollowingUser, setIsFollowingUser] = useState(false);
 
     const coverImgRef = useRef(null);
     const profileImgRef = useRef(null);
 
     const queryClient = useQueryClient();
 
+    const { follow, isLoading } = useFollow();
     const { data: authUser } = useQuery({ queryKey: ["authUser"] });
 
-    const { data: user, isLoading, refetch, isRefetching } = useQuery({
+    const { data: user, isPending, refetch, isRefetching } = useQuery({
         queryKey: ["userProfile", username],
         queryFn: async () => {
             const res = await fetch(`/api/users/profile/${username}`);
@@ -33,7 +37,38 @@ const ProfilePage = () => {
             }
             return data;
         },
+        onSuccess: (data) => {
+            setIsFollowingUser(data.followers.includes(authUser?._id));
+        },
     });
+
+    const { data: posts } = useQuery({
+        queryKey: ["userPosts", username],
+        queryFn: async () => {
+            const res = await fetch(`/api/posts/user/${username}`);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Something went wrong");
+            }
+            return data;
+        },
+    });
+
+    const { data: likedPosts } = useQuery({
+        queryKey: ["likedPosts", user?._id],
+        queryFn: async () => {
+            if (!user?._id) return [];
+            const res = await fetch(`/api/posts/likes/${user._id}`);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Something went wrong");
+            }
+            return data;
+        },
+        enabled: !!user?._id, // Only run this query if user._id is defined
+    });
+
+    const { isUpdatingProfile, updateProfile } = useUpdateUserProfile();
 
     const isMyProfile = authUser?.username === username;
 
@@ -51,7 +86,8 @@ const ProfilePage = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["userProfile", username] });
             queryClient.invalidateQueries({ queryKey: ["authUser"] });
-            toast.success("Followed successfully");
+            setIsFollowingUser((prev) => !prev);
+            toast.success(isFollowingUser ? "Unfollowed successfully" : "Followed successfully");
         },
         onError: (error) => {
             toast.error(error.message);
@@ -74,6 +110,10 @@ const ProfilePage = () => {
         refetch()
     }, [username, refetch])
 
+    const handleProfileUpdate = () => {
+        refetch();
+    };
+
     return (
         <>
             <div className='flex-[4_4_0]  border-r border-gray-700 min-h-screen '>
@@ -89,7 +129,9 @@ const ProfilePage = () => {
                                 </Link>
                                 <div className='flex flex-col'>
                                     <p className='font-bold text-lg'>{user?.fullName}</p>
-                                    <span className='text-sm text-slate-500'>{user?.posts?.length} posts</span>
+                                    <span className='text-sm text-slate-500'>
+                                        {feedType === "posts" ? posts?.length : likedPosts?.length} {feedType}
+                                    </span>
                                 </div>
                             </div>
                             {/* COVER IMG */}
@@ -125,7 +167,7 @@ const ProfilePage = () => {
                                 {/* USER AVATAR */}
                                 <div className='avatar absolute -bottom-16 left-4'>
                                     <div className='w-32 rounded-full relative group/avatar'>
-                                        <img src={profileImg || user?.profileImg || "/avatar-placeholder.png"} />
+                                        <img src={profileImg || user?.profileImage || "/avatar-placeholder.png"} />
                                         <div className='absolute top-5 right-3 p-1 bg-primary rounded-full group-hover/avatar:opacity-100 opacity-0 cursor-pointer'>
                                             {isMyProfile && (
                                                 <MdEdit
@@ -138,14 +180,14 @@ const ProfilePage = () => {
                                 </div>
                             </div>
                             <div className='flex justify-end px-4 mt-5'>
-                                {isMyProfile && <EditProfileModal />}
+                                {isMyProfile && <EditProfileModal user={user} onProfileUpdate={handleProfileUpdate} />}
                                 {!isMyProfile && (
                                     <button
                                         className='btn btn-outline rounded-full btn-sm'
                                         onClick={() => followUnfollow(user._id)}
                                         disabled={isFollowing}
                                     >
-                                        {isFollowing ? "Following..." : user.followers.includes(authUser._id) ? "Unfollow" : "Follow"}
+                                        {isFollowing ? "Carregando..." : isFollowingUser ? "Unfollow" : "Follow"}
                                     </button>
                                 )}
                                 {(coverImg || profileImg) && (
@@ -153,7 +195,7 @@ const ProfilePage = () => {
                                         className='btn btn-primary rounded-full btn-sm text-white px-4 ml-2'
                                         onClick={() => alert("Profile updated successfully")}
                                     >
-                                        Update
+                                        Atualizar
                                     </button>
                                 )}
                             </div>
@@ -183,7 +225,7 @@ const ProfilePage = () => {
                                     )}
                                     <div className='flex gap-2 items-center'>
                                         <IoCalendarOutline className='w-4 h-4 text-slate-500' />
-                                        <span className='text-sm text-slate-500'>Joined {new Date(user?.createdAt).toLocaleDateString()}</span>
+                                        <span className='text-sm text-slate-500'>Entrou em {new Date(user?.createdAt).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                                 <div className='flex gap-2'>

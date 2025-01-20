@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import LoadingSpinner from "./LoadingSpinner";
-import { formatPostDate } from "../../utils/db/date";
+import { formatPostDate } from "../../utils/date";
 
 const Post = ({ post }) => {
     const [comment, setComment] = useState("");
@@ -18,7 +18,6 @@ const Post = ({ post }) => {
     const queryClient = useQueryClient();
 
     const [likes, setLikes] = useState(post.likes);
-    //toast.success("Post deleted successfully!"); 
     const [isLiked, setIsLiked] = useState(post.likes.includes(authUser._id));
 
     const postOwner = post.user;
@@ -77,34 +76,34 @@ const Post = ({ post }) => {
     });
 
     const { mutate: commentPost, isPending: isCommenting } = useMutation({
-		mutationFn: async () => {
-			try {
-				const res = await fetch(`/api/posts/comment/${post._id}`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ text: comment }),
-				});
-				const data = await res.json();
+        mutationFn: async () => {
+            try {
+                const res = await fetch(`/api/posts/comment/${post._id}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ text: comment }),
+                });
+                const data = await res.json();
 
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
-		onSuccess: () => {
-			toast.success("Comment posted successfully");
-			setComment("");
-			queryClient.invalidateQueries({ queryKey: ["posts"] });
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
+                if (!res.ok) {
+                    throw new Error(data.error || "Something went wrong");
+                }
+                return data;
+            } catch (error) {
+                throw new Error(error);
+            }
+        },
+        onSuccess: () => {
+            toast.success("Comment posted successfully");
+            setComment("");
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
 
     const handleDeletePost = () => {
         deletePost();
@@ -126,7 +125,7 @@ const Post = ({ post }) => {
             <div className='flex gap-2 items-start p-4 border-b border-gray-700'>
                 <div className='avatar'>
                     <Link to={`/profile/${postOwner.username}`} className='w-8 rounded-full overflow-hidden'>
-                        <img src={postOwner.profileImg || "/avatar-placeholder.png"} />
+                        <img src={postOwner.profileImage || "/avatar-placeholder.png"} />
                     </Link>
                 </div>
                 <div className='flex flex-col flex-1'>
